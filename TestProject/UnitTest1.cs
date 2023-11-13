@@ -2,9 +2,12 @@ using DevExpress.Data.Filtering;
 using DevExpress.Utils;
 using DevExpress.Xpo;
 using DevExpress.Xpo.Logger;
+using DevExpress.Xpo.Metadata;
 using Microsoft.Extensions.Configuration;
+using System.ComponentModel;
 using System.Diagnostics;
 using TestProject.NWind;
+using Ultra.Xpo;
 using Ultra.Xpo.Loggers;
 
 namespace TestProject
@@ -49,6 +52,69 @@ namespace TestProject
                 }
                 Debug.WriteLine("-----------");
             }
+            Assert.Pass();
+        }
+        [Test]
+        public void CreateUltraViewWithPropertiesTest()
+        {
+
+
+            // Registers your custom logger.
+            DevExpress.Xpo.Logger.LogManager.SetTransport(new XpoFileLogger(nameof(CreateViewWithPropertiesTest) + ".txt"));
+
+
+            IConfiguration configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+
+            .Build();
+
+            var Ds = ConnectionHelper.GetConnectionProvider(configuration, DevExpress.Xpo.DB.AutoCreateOption.SchemaAlreadyExists);
+
+            SimpleDataLayer simpleDataLayer = new SimpleDataLayer(Ds);
+            UnitOfWork unitOfWork = new UnitOfWork(simpleDataLayer);
+
+            BinaryOperator binaryOperator = new BinaryOperator("Orderid", 9911077);
+            //var View = typeof(Orders).CreateUltraViewWithProperties(unitOfWork, binaryOperator);
+
+
+            var classInfo=unitOfWork.GetClassInfo(typeof(Orders));
+            var view = new UltraXPView(unitOfWork, classInfo.ClassType);
+            view.Criteria = binaryOperator;
+
+            foreach (XPMemberInfo memberInfo in classInfo.Members)
+            {
+                if (!memberInfo.IsPersistent || memberInfo.IsCollection)
+                    continue;
+
+                if (memberInfo.ReferenceType != null)
+                {
+                    // Get key property of the associated object
+                    XPClassInfo nestedClassInfo = memberInfo.ReferenceType;//session.GetClassInfo(memberInfo.ReferenceType);
+                    XPMemberInfo keyProperty = nestedClassInfo.KeyProperty;
+
+                    // Attempt to find a property marked with DefaultPropertyAttribute
+                    var defaultPropertyAttribute = nestedClassInfo.FindAttributeInfo(typeof(DefaultPropertyAttribute)) as DefaultPropertyAttribute;
+
+                    string defaultPropertyName = defaultPropertyAttribute != null ? defaultPropertyAttribute.Name : keyProperty.Name;
+
+                    // Add key property of the associated object to the view
+                    view.Properties.Add(new UltraViewProperty(memberInfo.Name + "." + keyProperty.Name, SortDirection.None, memberInfo.Name + "." + keyProperty.Name, false, true));
+
+                    // If the default property is different from the key, add it as well
+                    if (defaultPropertyAttribute != null && defaultPropertyName != keyProperty.Name)
+                    {
+                        view.Properties.Add(new UltraViewProperty(memberInfo.Name + "." + defaultPropertyName, SortDirection.None, memberInfo.Name + "." + defaultPropertyName, false, true));
+                    }
+                }
+                else
+                {
+                    // Add the simple property to the view
+                    view.Properties.Add(new UltraViewProperty(memberInfo.Name, SortDirection.None, memberInfo.Name, false, true));
+                }
+            }
+            var Select=view.GenerateSelectStatement();
+            var Data=Ds.SelectData(view.select);
+         
             Assert.Pass();
         }
         [Test]
