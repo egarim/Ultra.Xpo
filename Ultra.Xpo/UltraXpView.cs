@@ -618,7 +618,6 @@ namespace Ultra.Xpo
             CriteriaOperatorCollection groupProperties;
             SortingCollection sorting;
             PrepareLoad(out properties, out groupProperties, out sorting);
-            select = GenerateSelectStatementCore(properties, groupProperties, sorting);
             return EndLoad(properties, groupProperties, sorting);
 
         }

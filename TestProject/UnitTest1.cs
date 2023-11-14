@@ -1,4 +1,5 @@
 using DevExpress.Data.Filtering;
+using DevExpress.DirectX.Common;
 using DevExpress.Utils;
 using DevExpress.Xpo;
 using DevExpress.Xpo.Logger;
@@ -73,11 +74,28 @@ namespace TestProject
             SimpleDataLayer simpleDataLayer = new SimpleDataLayer(Ds);
             UnitOfWork unitOfWork = new UnitOfWork(simpleDataLayer);
 
-            BinaryOperator binaryOperator = new BinaryOperator("Orderid", 9911077);
-            //var View = typeof(Orders).CreateUltraViewWithProperties(unitOfWork, binaryOperator);
+            BinaryOperator binaryOperator11077 = new BinaryOperator("Orderid", 11077);
+            BinaryOperator binaryOperator9911077 = new BinaryOperator("Orderid", 9911077);
 
 
-            var classInfo=unitOfWork.GetClassInfo(typeof(Orders));
+            var classInfo = unitOfWork.GetClassInfo(typeof(Orders));
+            UltraXPView view11077 = CreateUltraView(unitOfWork, binaryOperator11077, classInfo);
+            var Select = view11077.GenerateSelectStatement();
+
+            UltraXPView view9911077 = CreateUltraView(unitOfWork, binaryOperator9911077, classInfo);
+            var Select2 = view9911077.GenerateSelectStatement();
+
+            var Data = Ds.SelectData(Select, Select2);
+            var Record = new UltraViewRecord(view9911077, Data.ResultSet[0].Rows[0].Values);
+            foreach (UltraViewProperty ultraViewProperty in view9911077.Properties)
+            {
+                var val=Record[ultraViewProperty.Name];
+            }
+            Assert.Pass();
+        }
+
+        private static UltraXPView CreateUltraView(UnitOfWork unitOfWork, BinaryOperator binaryOperator, XPClassInfo classInfo)
+        {
             var view = new UltraXPView(unitOfWork, classInfo.ClassType);
             view.Criteria = binaryOperator;
 
@@ -112,11 +130,10 @@ namespace TestProject
                     view.Properties.Add(new UltraViewProperty(memberInfo.Name, SortDirection.None, memberInfo.Name, false, true));
                 }
             }
-            var Select=view.GenerateSelectStatement();
-            var Data=Ds.SelectData(view.select);
-         
-            Assert.Pass();
+
+            return view;
         }
+
         [Test]
         public void CreateModificationCommand()
         {
