@@ -40,6 +40,8 @@ namespace TestProject
             SimpleDataLayer simpleDataLayer = new SimpleDataLayer(Ds);
             UnitOfWork unitOfWork = new UnitOfWork(simpleDataLayer);
 
+            unitOfWork.UpdateSchema();
+
             BinaryOperator binaryOperator = new BinaryOperator("Orderid", 11077);
             var View = typeof(Orders).CreateViewWithProperties(unitOfWork, binaryOperator);
 
@@ -54,11 +56,26 @@ namespace TestProject
             }
             Assert.Pass();
         }
+        IDataLayer InitXpo(string cnx)
+        {
+            //best practice #7
+            //https://supportcenter.devexpress.com/ticket/details/a2944/xpo-best-practices
+            IDataLayer dl = XpoDefault.GetDataLayer(cnx, DevExpress.Xpo.DB.AutoCreateOption.DatabaseAndSchema);
+            using (Session session = new Session(dl))
+            {
+                System.Reflection.Assembly[] assemblies = new System.Reflection.Assembly[] {
+                typeof(Customers).Assembly };
+
+                session.UpdateSchema(assemblies);
+                session.CreateObjectTypeRecords(assemblies);
+            }
+            return dl;
+        }
         [Test]
         public void CreateUltraViewWithPropertiesTest()
         {
 
-
+         
             // Registers your custom logger.
             DevExpress.Xpo.Logger.LogManager.SetTransport(new XpoFileLogger(nameof(CreateViewWithPropertiesTest) + ".txt"));
 
@@ -67,7 +84,8 @@ namespace TestProject
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
 
             .Build();
-
+          
+            InitXpo(configuration.GetConnectionString("NWind"));
             var Ds = ConnectionHelper.GetConnectionProvider(configuration, DevExpress.Xpo.DB.AutoCreateOption.SchemaAlreadyExists);
 
             SimpleDataLayer simpleDataLayer = new SimpleDataLayer(Ds);
@@ -113,7 +131,7 @@ namespace TestProject
                 }
             }
             var Select=view.GenerateSelectStatement();
-            var Data=Ds.SelectData(view.select);
+            var Data=Ds.SelectData(Select);
          
             Assert.Pass();
         }
